@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ligero — convierte a Markdown</title>
+<style>
+  :root{
+    --bg:#EDEFE7;
+    --surface:#FFFFFF;
+    --ink:#1F2620;
+    --ink-muted:#6B7568;
+    --user-bg:#2F3B33;
+    --user-fg:#F3F4EE;
+    --accent:#C98A2B;
+    --accent-2:#3F6E52;
+    --line:#D7DACB;
+    --mono: ui-monospace, 'SFMono-Regular', 'IBM Plex Mono', Menlo, Consolas, monospace;
+    --sans: -apple-system, 'Segoe UI', 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 20px;
+    border-bottom:1px solid var(--line);
+    background:var(--bg);
+  }
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand .hash{font-family:var(--mono); color:var(--accent-2); font-weight:700; font-size:20px;}
+  .brand h1{font-family:var(--mono); font-size:18px; margin:0; font-weight:700; letter-spacing:-0.02em;}
+  .brand .tag{font-size:12.5px; color:var(--ink-muted); margin-left:4px;}
+  .brand-sub{display:none;}
+  @media (min-width:640px){
+    .brand-sub{display:inline; font-size:12.5px; color:var(--ink-muted); border-left:1px solid var(--line); padding-left:10px; margin-left:2px;}
+  }
+  button.ghost{
+    font-family:var(--mono);
+    font-size:12.5px;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink-muted);
+    padding:7px 12px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  button.ghost:hover{border-color:var(--ink-muted); color:var(--ink);}
+
+  /* ---------- chat area ---------- */
+  #chat{
+    flex:1 1 auto;
+    overflow-y:auto;
+    padding:22px 16px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .row{display:flex; max-width:840px; width:100%; margin:0 auto;}
+  .row.user{justify-content:flex-end;}
+  .row.assistant{justify-content:flex-start;}
+
+  .bubble{max-width:78%;}
+  .row.user .bubble{
+    background:var(--user-bg);
+    color:var(--user-fg);
+    padding:12px 14px;
+    border-radius:10px 10px 2px 10px;
+  }
+  .row.user .bubble .label{
+    font-family:var(--mono); font-size:11px; opacity:.6; margin-bottom:5px;
+  }
+  .row.user .bubble pre{
+    margin:0; white-space:pre-wrap; word-break:break-word;
+    font-family:var(--mono); font-size:12.5px; line-height:1.5;
+    max-height:220px; overflow:hidden; position:relative;
+  }
+
+  .row.assistant .bubble{width:100%; max-width:100%;}
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .card .md-body{
+    padding:14px 16px;
+    font-family:var(--mono);
+    font-size:12.8px;
+    line-height:1.6;
+    white-space:pre-wrap;
+    word-break:break-word;
+    max-height:420px;
+    overflow-y:auto;
+  }
+  .card .toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 12px;
+    border-top:1px dashed var(--line);
+    background:#FAFAF6;
+  }
+  .toolbar .actions{display:flex; gap:6px;}
+  .toolbar button{
+    font-family:var(--mono);
+    font-size:11.5px;
+    background:transparent;
+    border:1px solid var(--line);
+    padding:5px 9px;
+    border-radius:6px;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .toolbar button:hover{border-color:var(--accent-2); color:var(--accent-2);}
+
+  /* receipt / signature element */
+  .receipt{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--accent);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    white-space:nowrap;
+  }
+  .receipt b{color:var(--accent); font-weight:700;}
+  .receipt .dot{opacity:.4;}
+
+  .assistant-note{
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--ink-muted);
+    padding:2px 4px 0;
+  }
+  .assistant-note .gt{color:var(--accent-2); font-weight:700; margin-right:4px;}
+
+  /* ---------- input area ---------- */
+  #inputWrap{
+    flex:0 0 auto;
+    border-top:1px solid var(--line);
+    background:var(--bg);
+    padding:14px 16px 18px;
+  }
+  #inputInner{
+    max-width:840px;
+    margin:0 auto;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    padding:8px 8px 8px 14px;
+  }
+  #ta{
+    flex:1;
+    border:none;
+    outline:none;
+    resize:none;
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.5;
+    max-height:220px;
+    min-height:24px;
+    padding:8px 0;
+    background:transparent;
+    color:var(--ink);
+  }
+  #sendBtn{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:13px;
+    background:var(--accent-2);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  #sendBtn:hover{background:#345c44;}
+  #sendBtn:disabled{background:var(--line); cursor:default;}
+  #clipBtn{
+    flex:0 0 auto;
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:8px;
+    width:38px; height:38px;
+    font-size:16px;
+    cursor:pointer;
+    color:var(--ink-muted);
+    margin-bottom:1px;
+  }
+  #clipBtn:hover{border-color:var(--accent-2); color:var(--accent-2);}
+
+  #dropOverlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(237,239,231,.92);
+    z-index:50;
+    align-items:center;
+    justify-content:center;
+  }
+  #dropOverlay.active{display:flex;}
+  .dropCard{
+    font-family:var(--mono);
+    font-size:15px;
+    text-align:center;
+    color:var(--accent-2);
+    border:2px dashed var(--accent-2);
+    border-radius:14px;
+    padding:36px 48px;
+    background:var(--surface);
+  }
+  .dropCard span{font-size:11.5px; color:var(--ink-muted);}
+
+  .loading .md-body{color:var(--ink-muted); font-style:italic;}
+  .file-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:var(--mono); font-size:11.5px;
+    background:rgba(255,255,255,.12);
+    border-radius:6px; padding:3px 8px; margin-bottom:6px;
+  }
+  .row.user .file-chip{background:rgba(255,255,255,.14); color:var(--user-fg);}
+  #hint{
+    max-width:840px;
+    margin:8px auto 0;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-muted);
+    text-align:center;
+  }
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="hash">#</span>
+    <h1>Ligero</h1>
+    <span class="tag">markdown para IA</span>
+    <span class="brand-sub">pega texto, tablas o HTML → recibe Markdown limpio</span>
+  </div>
+  <button class="ghost" id="clearBtn">vaciar chat</button>
+</header>
+
+<div id="dropOverlay">
+  <div class="dropCard">suelta el archivo para convertirlo<br><span>.docx · .pdf · .xlsx · .csv · .txt · imagen</span></div>
+</div>
+
+<div id="chat"></div>
+
+<div id="inputWrap">
+  <div id="inputInner">
+    <button id="clipBtn" title="Adjuntar archivo (.docx, .pdf, .xlsx, .csv, .txt, imágenes)">📎</button>
+    <input type="file" id="fileInput" accept=".docx,.pdf,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png,.webp,.bmp" hidden>
+    <textarea id="ta" rows="1" placeholder="Pega aquí una tabla, un texto, HTML o una imagen…"></textarea>
+    <button id="sendBtn">Convertir ↵</button>
+  </div>
+  <div id="hint">Enter para convertir · Shift+Enter para salto de línea · 📎 o pega una imagen · nada se sube a ningún servidor</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script>
+  // OpenCV.js se carga de forma diferida y opcional (para preprocesamiento).
+  // Si no carga, el pipeline usa preprocesamiento por canvas como respaldo.
+  window._cvReady = false;
+  (function(){
+    var s = document.createElement('script');
+    s.src = 'https://docs.opencv.org/4.10.0/opencv.js';
+    s.async = true;
+    s.onload = function(){
+      if (window.cv && cv.getBuildInformation) { window._cvReady = true; }
+      else if (window.cv instanceof Promise) { cv.then(function(m){ window.cv = m; window._cvReady = true; }); }
+      else if (window.cv) { cv['onRuntimeInitialized'] = function(){ window._cvReady = true; }; }
+    };
+    s.onerror = function(){ window._cvReady = false; };
+    document.head.appendChild(s);
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.1.2/turndown.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+<script>
+(function(){
+
+  const chatEl = document.getElementById('chat');
+  const ta = document.getElementById('ta');
+  const sendBtn = document.getElementById('sendBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  const STORAGE_KEY = 'ligero_chat_v1';
+  let messages = [];
+  let lastCleared = null;
+  let lastPastedHTML = null;   // HTML del portapapeles, si vino uno "rico"
+  let lastPastedPlain = null;  // texto plano correspondiente a ese paste
+
+  const td = new TurndownDecorated();
+
+  function TurndownDecorated(){
+    const t = new TurndownService({
+      headingStyle: 'atx',
+      bulletListMarker: '-',
+      codeBlockStyle: 'fenced'
+    });
+    t.addRule('tablesGfm', {
+      filter: 'table',
+      replacement: function(content, node){ return tableToMarkdown(node); }
+    });
+    return t;
+  }
+
+  // ---------- conversión de tablas HTML → Markdown ----------
+  function tableToMarkdown(tableNode){
+    const rows = Array.from(tableNode.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.children).map(cell => cleanCell(cell.textContent))
+    );
+    if(!rows.length) return '';
+    return rowsToMarkdownTable(rows);
+  }
+
+  function cleanCell(text){
+    return (text || '').replace(/\s+/g,' ').trim().replace(/\|/g,'\\|');
+  }
+
+  function rowsToMarkdownTable(rows){
+    const colCount = Math.max(...rows.map(r => r.length));
+    const norm = rows.map(r => {
+      const row = r.slice();
+      while(row.length < colCount) row.push('');
+      return row;
+    });
+    const header = norm[0];
+    const body = norm.slice(1);
+    let out = '| ' + header.join(' | ') + ' |\n';
+    out += '| ' + header.map(()=> '---').join(' | ') + ' |\n';
+    body.forEach(r => { out += '| ' + r.join(' | ') + ' |\n'; });
+    return out.trim();
+  }
+
+  // ---------- detección de tabla en texto plano (pegado de Excel/Sheets) ----------
+  function looksLikeTabularText(text){
+    const lines = text.split('\n').filter(l => l.trim().length);
+    if(lines.length < 2) return false;
+    const tabbed = lines.filter(l => l.includes('\t')).length;
+    return tabbed >= Math.ceil(lines.length * 0.7);
+  }
+
+  function tabbedTextToMarkdown(text){
+    const rows = text.split('\n').filter(l => l.trim().length).map(l => l.split('\t').map(cleanCell));
+    return rowsToMarkdownTable(rows);
+  }
+
+  // ---------- limpieza de texto plano suelto ----------
+  function plainTextToMarkdown(text){
+    return text
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map(l => l.replace(/[ \t]+$/,''))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  // ---------- núcleo: decide cómo convertir lo que llegó ----------
+  function convert(rawText){
+    const htmlAvailable = lastPastedHTML && lastPastedPlain &&
+      normalize(lastPastedPlain) === normalize(rawText);
+
+    if(htmlAvailable && /<table/i.test(lastPastedHTML)){
+      return { markdown: td.turndown(lastPastedHTML), kind: 'tabla (HTML)' };
+    }
+    if(htmlAvailable && /<[a-z][\s\S]*>/i.test(lastPastedHTML)){
+      return { markdown: td.turndown(lastPastedHTML), kind: 'HTML' };
+    }
+    if(looksLikeTabularText(rawText)){
+      return { markdown: tabbedTextToMarkdown(rawText), kind: 'tabla (texto)' };
+    }
+    return { markdown: plainTextToMarkdown(rawText), kind: 'texto' };
+  }
+
+  function normalize(s){ return (s||'').trim(); }
+
+  // ---------- lectura y conversión de archivos ----------
+  function readAsArrayBuffer(file){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsArrayBuffer(file);
+    });
+  }
+  function readAsText(file){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsText(file);
+    });
+  }
+
+  function parseCsvLine(line){
+    // separador simple con soporte básico de comillas
+    const cells = [];
+    let cur = '', inQuotes = false;
+    for(let i=0; i<line.length; i++){
+      const c = line[i];
+      if(c === '"'){ inQuotes = !inQuotes; continue; }
+      if(c === ',' && !inQuotes){ cells.push(cur); cur=''; continue; }
+      cur += c;
+    }
+    cells.push(cur);
+    return cells.map(cleanCell);
+  }
+
+  function csvToMarkdown(text){
+    const lines = text.replace(/\r\n/g,'\n').split('\n').filter(l => l.trim().length);
+    const rows = lines.map(parseCsvLine);
+    return rowsToMarkdownTable(rows);
+  }
+
+  async function pdfToMarkdown(file){
+    const buffer = await readAsArrayBuffer(file);
+    const pdf = await pdfjsLib.getDocument({ data: buffer, disableWorker: true }).promise;
+    let textParts = [];
+    for(let i = 1; i <= pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(it => it.str).join(' ');
+      textParts.push(pageText);
+    }
+    const raw = textParts.join('\n\n');
+    return plainTextToMarkdown(raw);
+  }
+
+  async function xlsxToMarkdown(file){
+    const buffer = await readAsArrayBuffer(file);
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const parts = [];
+    wb.SheetNames.forEach(sheetName => {
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+        .map(r => r.map(cell => cleanCell(String(cell))))
+        .filter(r => r.some(c => c.length));
+      if(!rows.length) return;
+      const heading = wb.SheetNames.length > 1 ? `## ${sheetName}\n\n` : '';
+      parts.push(heading + rowsToMarkdownTable(rows));
+    });
+    return parts.join('\n\n');
+  }
+
+  // ==========================================================================
+  //  NÚCLEO DE POST-PROCESAMIENTO (validación por tipo de columna, diccionarios,
+  //  regex y similitud de texto). Probado por separado con node.
+  // ==========================================================================
+  function levenshtein(a, b) {
+    a = a || ''; b = b || '';
+    const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    const dp = new Array(n + 1);
+    for (let j = 0; j <= n; j++) dp[j] = j;
+    for (let i = 1; i <= m; i++) {
+      let prev = dp[0]; dp[0] = i;
+      for (let j = 1; j <= n; j++) {
+        const tmp = dp[j];
+        dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i-1] === b[j-1] ? 0 : 1));
+        prev = tmp;
+      }
+    }
+    return dp[n];
+  }
+  function stripAccents(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
+  const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DAYS_ES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+  function correctByDictionary(value, dictionary, maxRatio = 0.45){
+    const t = (value||'').trim();
+    if(!/[a-záéíóúñü]{3,}/i.test(t)) return null;
+    const low = stripAccents(t.toLowerCase());
+    let best = null, bestD = Infinity;
+    for(const w of dictionary){
+      const d = levenshtein(low, stripAccents(w.toLowerCase()));
+      if(d < bestD){ bestD = d; best = w; }
+    }
+    if(best && bestD <= Math.max(2, Math.floor(best.length * maxRatio))) return best;
+    return null;
+  }
+  const correctMonth = v => correctByDictionary(v, MONTHS_ES, 0.5);
+  const correctDay   = v => correctByDictionary(v, DAYS_ES, 0.4);
+
+  const RE = {
+    currency: /^[\$€£]?\s?-?\d{1,3}([.,]\d{3})*([.,]\d{1,2})?\s?[\$€£]?$/,
+    number:   /^-?\d{1,3}([.,]\d{3})*([.,]\d+)?$|^-?\d+([.,]\d+)?$/,
+    percent:  /^-?\d+([.,]\d+)?\s?%$/,
+    dateSlash:/^\d{1,4}[\/\-.]\d{1,2}[\/\-.]\d{1,4}$/
+  };
+
+  function validateCell(value, type){
+    const t = (value||'').trim();
+    if(!t) return true;
+    switch(type){
+      case 'currency': return RE.currency.test(t);
+      case 'number':   return RE.number.test(t) || RE.percent.test(t);
+      case 'percent':  return RE.percent.test(t);
+      case 'date':     return RE.dateSlash.test(t);
+      case 'month':    return correctMonth(t) !== null;
+      case 'day':      return correctDay(t) !== null;
+      case 'text':     return /[a-záéíóúñü]{2,}/i.test(t);
+      default:         return true;
+    }
+  }
+
+  function inferColumnType(cells){
+    const vals = cells.map(c => (c||'').trim()).filter(Boolean);
+    if(!vals.length) return 'text';
+    const score = { currency:0, number:0, percent:0, date:0, month:0, day:0, text:0 };
+    for(const v of vals){
+      if(RE.currency.test(v) && /[\$€£]/.test(v)) score.currency += 2;
+      else if(RE.currency.test(v) && /[.,]\d{2}$/.test(v)) score.currency += 1;
+      if(RE.percent.test(v)) score.percent += 2;
+      if(RE.number.test(v)) score.number += 1;
+      if(RE.dateSlash.test(v)) score.date += 2;
+      if(correctMonth(v)) score.month += 2;
+      if(correctDay(v)) score.day += 1;
+      if(/[a-záéíóúñü]{3,}/i.test(v) && !correctMonth(v) && !correctDay(v)) score.text += 1;
+    }
+    let best = 'text', bestS = -1;
+    for(const k in score) if(score[k] > bestS){ bestS = score[k]; best = k; }
+    if(best === 'number' && score.currency >= score.number * 0.8 && score.currency > 0) best = 'currency';
+    return best;
+  }
+
+  function normalizeCell(value, type){
+    let t = (value||'').trim();
+    if(!t) return t;
+    if(type === 'month'){ const m = correctMonth(t); return m || t; }
+    if(type === 'day'){ const d = correctDay(t); return d || t; }
+    if(type === 'currency'){ return t.replace(/\s+/g,''); }
+    return t;
+  }
+
+  // whitelist de caracteres por tipo, para la segunda pasada de OCR
+  function whitelistFor(type){
+    switch(type){
+      case 'currency': return '0123456789$€£.,';
+      case 'number':   return '0123456789.,%-';
+      case 'percent':  return '0123456789.,%';
+      case 'date':     return '0123456789/.-';
+      default:         return ''; // sin restricción para texto/meses
+    }
+  }
+
+  // ¿la primera fila parece un encabezado (etiquetas de texto) y no datos?
+  function looksLikeHeader(rows){
+    if(rows.length < 2) return false;
+    const first = rows[0].map(c => (c||'').trim());
+    const nonEmpty = first.filter(Boolean);
+    if(nonEmpty.length < 2) return false;
+    // encabezado: celdas mayormente de texto, sin monedas ni números largos
+    const textish = nonEmpty.filter(c => /[a-záéíóúñü]{2,}/i.test(c) && !/[\$€£]/.test(c) && !/\d{3,}/.test(c) && !correctMonth(c));
+    return textish.length >= Math.ceil(nonEmpty.length * 0.6);
+  }
+
+  // procesa la tabla: infiere tipos, normaliza, valida y devuelve fallos
+  function postProcessTable(rows, options){
+    options = options || {};
+    const hasHeader = options.hasHeader !== false;
+    if(!rows || !rows.length) return { table: rows, columnTypes: [], failures: [] };
+    const colCount = Math.max(...rows.map(r => r.length));
+    const bodyStart = hasHeader ? 1 : 0;
+    const columnTypes = [];
+    for(let c=0; c<colCount; c++){
+      const colCells = [];
+      for(let r=bodyStart; r<rows.length; r++) colCells.push(rows[r][c] || '');
+      columnTypes.push(inferColumnType(colCells));
+    }
+    const failures = [];
+    const table = rows.map((row, r) => row.map((cell, c) => {
+      if(r < bodyStart) return cell;
+      const type = columnTypes[c] || 'text';
+      const normalized = normalizeCell(cell, type);
+      if(!validateCell(normalized, type)) failures.push({ r, c, value: cell, type });
+      return normalized;
+    }));
+    return { table, columnTypes, failures };
+  }
+
+  // agrupa palabras reconocidas (con su posición x/y) en filas y columnas
+  // usando solo geometría -- sin IA, sin adivinar contenido, solo posiciones.
+  function wordsToTable(words, returnBoxes){
+    if(!words || words.length < 2) return null;
+
+    const avgHeight = words.reduce((s,w)=> s + (w.bbox.y1 - w.bbox.y0), 0) / words.length;
+    const rowGap = avgHeight * 0.6;
+
+    const sorted = [...words].sort((a,b)=>
+      (a.bbox.y0 + a.bbox.y1) - (b.bbox.y0 + b.bbox.y1));
+
+    const rows = [];
+    let current = [], currentY = null;
+    sorted.forEach(w => {
+      const cy = (w.bbox.y0 + w.bbox.y1) / 2;
+      if(currentY === null || Math.abs(cy - currentY) <= rowGap){
+        current.push(w);
+        currentY = currentY === null ? cy : (currentY + cy) / 2;
+      } else {
+        rows.push(current);
+        current = [w];
+        currentY = cy;
+      }
+    });
+    if(current.length) rows.push(current);
+    rows.forEach(r => r.sort((a,b)=> a.bbox.x0 - b.bbox.x0));
+
+    if(rows.length < 2) return null;
+
+    // fila con más palabras = mejor referencia de columnas (suele ser el encabezado)
+    let anchorRow = rows[0];
+    rows.forEach(r => { if(r.length > anchorRow.length) anchorRow = r; });
+    if(anchorRow.length < 2) return null;
+
+    // ¿se ve realmente como tabla? (varias filas con 2+ palabras)
+    const multiWordRows = rows.filter(r => r.length >= 2).length;
+    if(multiWordRows / rows.length < 0.5) return null;
+
+    const anchors = anchorRow.map(w => (w.bbox.x0 + w.bbox.x1) / 2);
+
+    const tableText = [];
+    const tableBoxes = [];
+    rows.forEach(row => {
+      const cells = new Array(anchors.length).fill('');
+      const boxes = new Array(anchors.length).fill(null);
+      row.forEach(w => {
+        const cx = (w.bbox.x0 + w.bbox.x1) / 2;
+        let bestIdx = 0, bestDist = Infinity;
+        anchors.forEach((a,i) => { const d = Math.abs(cx-a); if(d < bestDist){ bestDist = d; bestIdx = i; } });
+        cells[bestIdx] = cells[bestIdx] ? cells[bestIdx] + ' ' + w.text : w.text;
+        // expandir el bbox de la celda para englobar todas sus palabras
+        const bb = w.bbox;
+        if(!boxes[bestIdx]) boxes[bestIdx] = { x0:bb.x0, y0:bb.y0, x1:bb.x1, y1:bb.y1 };
+        else {
+          boxes[bestIdx].x0 = Math.min(boxes[bestIdx].x0, bb.x0);
+          boxes[bestIdx].y0 = Math.min(boxes[bestIdx].y0, bb.y0);
+          boxes[bestIdx].x1 = Math.max(boxes[bestIdx].x1, bb.x1);
+          boxes[bestIdx].y1 = Math.max(boxes[bestIdx].y1, bb.y1);
+        }
+      });
+      tableText.push(cells.map(cleanCell));
+      tableBoxes.push(boxes);
+    });
+
+    if(returnBoxes) return { text: tableText, boxes: tableBoxes };
+    return tableText;
+  }
+
+  function readAsDataUrl(file){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  // quita ruido típico de capturas de Excel: filas/columnas de "chrome" (letras de
+  // columna, números de fila) que solo tienen tokens muy cortos, y prefijos cortos
+  // pegados al inicio de una celda (p. ej. "2 Enero" -> "Enero").
+  function cleanOcrTable(rows){
+    if(!rows.length) return rows;
+    let result = rows.map(r => r.slice());
+
+    // fila vacía
+    const isEmptyRow = r => !r.some(c => c && c.trim().length);
+
+    // fila de "chrome" de Excel: SOLO letras sueltas de columna (A B C D...) o
+    // índices numéricos de fila puros. NO borra filas que tengan palabras reales.
+    const isChromeRow = r => {
+      const nonEmpty = r.filter(c => c && c.trim().length);
+      if(!nonEmpty.length) return true;
+      const allSingleLetters = nonEmpty.every(c => /^[A-Za-z]$/.test(c.trim()));
+      const allPureNumbers   = nonEmpty.every(c => /^\d{1,3}$/.test(c.trim()));
+      // si alguna celda tiene una palabra real (3+ letras), NO es chrome
+      const hasRealWord = nonEmpty.some(c => /[a-záéíóúñü]{3,}/i.test(c.trim()));
+      if(hasRealWord) return false;
+      return allSingleLetters || allPureNumbers;
+    };
+
+    while(result.length > 1 && (isEmptyRow(result[0]) || isChromeRow(result[0]))) result.shift();
+    while(result.length > 1 && (isEmptyRow(result[result.length-1]) || isChromeRow(result[result.length-1]))) result.pop();
+
+    // quitar prefijo de índice de fila SOLO si es un número corto seguido de palabra
+    // (p. ej. "2 Enero" -> "Enero"), nunca toca celdas que son solo números/moneda.
+    result = result.map(r => r.map(cell => {
+      const c = cell || '';
+      const m = c.match(/^(\d{1,3})\s+([a-záéíóúñü].{1,})$/i);
+      return m ? m[2] : c;
+    }));
+
+    const colCount = Math.max(...result.map(r => r.length));
+    const emptyCols = [];
+    for(let c=0; c<colCount; c++){
+      emptyCols.push(result.every(r => !(r[c] && r[c].trim())));
+    }
+    result = result.map(r => r.filter((_,c) => !emptyCols[c]));
+
+    return result;
+  }
+
+  // ¿el texto reconocido parece basura del OCR? (ruido sobre texturas, símbolos sueltos)
+  function isGibberish(text){
+    const clean = (text || '').trim();
+    if(!clean) return true;
+
+    // palabras "de verdad": secuencias de 3+ letras (incluye acentos/ñ)
+    const realWords = clean.match(/[a-záéíóúñü]{3,}/gi) || [];
+
+    // proporción de caracteres que son letras vs símbolos raros
+    const letters = (clean.match(/[a-záéíóúñü]/gi) || []).length;
+    const nonSpace = clean.replace(/\s/g,'').length;
+    const letterRatio = nonSpace ? letters / nonSpace : 0;
+
+    // densidad de "símbolos raros" típicos de alucinación del OCR
+    const weird = (clean.match(/[‘’“”¡¿·%{}\[\]<>\\\/|~^ïÏ_=+*]/g) || []).length;
+    const weirdRatio = nonSpace ? weird / nonSpace : 0;
+
+    // reglas: necesita varias palabras reales Y mayoría de letras Y poco ruido
+    if(realWords.length >= 4 && letterRatio > 0.6 && weirdRatio < 0.12) return false;
+    if(realWords.length >= 2 && letterRatio > 0.75 && weirdRatio < 0.08) return false;
+    return true;
+  }
+
+  // MobileNet devuelve etiquetas en inglés; traducimos las más comunes.
+  const LABEL_ES = {
+    'cat':'Gato','tabby':'Gato atigrado','egyptian cat':'Gato','siamese cat':'Gato siamés',
+    'persian cat':'Gato persa','dog':'Perro','labrador':'Perro labrador','golden retriever':'Perro golden retriever',
+    'puppy':'Cachorro','car':'Carro','sports car':'Carro deportivo','convertible':'Carro convertible',
+    'pickup':'Camioneta','minivan':'Furgoneta','jeep':'Jeep','cab':'Taxi','bicycle':'Bicicleta',
+    'mountain bike':'Bicicleta de montaña','motor scooter':'Motoneta','moped':'Ciclomotor',
+    'flower':'Flor','daisy':'Margarita','sunflower':'Girasol','rose':'Rosa','tree':'Árbol',
+    'mountain':'Montaña','alp':'Montaña','valley':'Valle','lakeside':'Lago','seashore':'Playa',
+    'beach':'Playa','cliff':'Acantilado','volcano':'Volcán','desert':'Desierto',
+    'coffee mug':'Taza de café','cup':'Taza','wine bottle':'Botella de vino','plate':'Plato',
+    'laptop':'Computador portátil','notebook':'Computador portátil','desktop computer':'Computador',
+    'cellular telephone':'Teléfono celular','cellphone':'Teléfono celular','screen':'Pantalla',
+    'book':'Libro','bookcase':'Estantería','pizza':'Pizza','hamburger':'Hamburguesa',
+    'banana':'Banano','orange':'Naranja','apple':'Manzana','strawberry':'Fresa',
+    'bird':'Ave','horse':'Caballo','cow':'Vaca','sheep':'Oveja','elephant':'Elefante',
+    'lion':'León','tiger':'Tigre','bear':'Oso','fish':'Pez','butterfly':'Mariposa',
+    'house':'Casa','castle':'Castillo','church':'Iglesia','bridge':'Puente','fountain':'Fuente'
+  };
+
+  function translateLabel(raw){
+    const parts = raw.toLowerCase().split(',').map(s => s.trim());
+    for(const p of parts){
+      if(LABEL_ES[p]) return LABEL_ES[p];
+    }
+    // busca coincidencia parcial (p. ej. "tabby cat" contiene "cat")
+    for(const key in LABEL_ES){
+      if(parts.some(p => p.includes(key))) return LABEL_ES[key];
+    }
+    // fallback: primera palabra tal cual, capitalizada
+    const first = parts[0].split(' ')[0];
+    return first.charAt(0).toUpperCase() + first.slice(1);
+  }
+
+  // ---- análisis de color por píxeles (sin modelo, matemática pura sobre el canvas) ----
+  const COLOR_REFS = [
+    ['negro',25,25,25], ['blanco',242,242,242], ['gris',128,128,128],
+    ['rojo',200,35,35], ['naranja',232,130,35], ['amarillo',235,220,55],
+    ['verde',65,160,75], ['azul',50,95,200], ['celeste',120,190,230],
+    ['morado',135,60,175], ['rosa',235,150,185], ['marrón',115,80,55],
+    ['beige',222,205,165]
+  ];
+
+  function nearestColorName(r,g,b){
+    let best = null, bestD = Infinity;
+    for(const [name,rr,gg,bb] of COLOR_REFS){
+      const d = (r-rr)**2 + (g-gg)**2 + (b-bb)**2;
+      if(d < bestD){ bestD = d; best = name; }
+    }
+    return best;
+  }
+
+  function topKey(counts){
+    let best = null, bestN = -1;
+    for(const k in counts){ if(counts[k] > bestN){ bestN = counts[k]; best = k; } }
+    return best;
+  }
+
+  function analyzeImageColors(dataUrl){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const W = 90, H = 90;
+        const c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, W, H);
+        let data;
+        try { data = ctx.getImageData(0,0,W,H).data; }
+        catch(e){ resolve(null); return; }
+
+        const centerCounts = {}, borderCounts = {};
+        let bgLum = 0, bgN = 0;
+        for(let y=0; y<H; y++){
+          for(let x=0; x<W; x++){
+            const i = (y*W + x) * 4;
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const name = nearestColorName(r,g,b);
+            if(x > W*0.30 && x < W*0.70 && y > H*0.30 && y < H*0.70){
+              centerCounts[name] = (centerCounts[name]||0) + 1;
+            }
+            if(x < W*0.12 || x > W*0.88 || y < H*0.12 || y > H*0.88){
+              borderCounts[name] = (borderCounts[name]||0) + 1;
+              bgLum += 0.299*r + 0.587*g + 0.114*b; bgN++;
+            }
+          }
+        }
+        const avgBgLum = bgN ? bgLum / bgN : 128;
+        resolve({
+          subjectColor: topKey(centerCounts),
+          bgColor: topKey(borderCounts),
+          bgBrightness: avgBgLum > 150 ? 'claro' : (avgBgLum < 85 ? 'oscuro' : 'de tono medio')
+        });
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    });
+  }
+
+  let _mobilenetModel = null;
+  let _lastClassifyError = null;
+  async function classifyImage(dataUrl){
+    _lastClassifyError = null;
+    if(typeof mobilenet === 'undefined' || typeof tf === 'undefined'){
+      _lastClassifyError = 'El modelo de clasificación no se cargó (revisa tu conexión o si un bloqueador impide cargar TensorFlow.js).';
+      return null;
+    }
+    try{
+      if(!_mobilenetModel) _mobilenetModel = await mobilenet.load();
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+      const preds = await _mobilenetModel.classify(img, 3);
+      if(!preds || !preds.length){
+        _lastClassifyError = 'El modelo no devolvió ninguna predicción.';
+        return null;
+      }
+      if(preds[0].probability < 0.15){
+        _lastClassifyError = 'confianza demasiado baja (' + Math.round(preds[0].probability*100) + '%)';
+        return null;
+      }
+      const label = translateLabel(preds[0].className);
+      return { label, confidence: preds[0].probability };
+    }catch(e){
+      _lastClassifyError = (e && e.message) ? e.message : String(e);
+      return null;
+    }
+  }
+
+  // evalúa si una tabla reconstruida tiene estructura "real" (no ruido de OCR):
+  // suficientes filas, columnas consistentes, y celdas con contenido con sentido.
+  function tableIsSolid(table){
+    if(!table || table.length < 3) return false;
+
+    const colCounts = table.map(r => r.filter(c => c && c.trim()).length);
+    const maxCols = Math.max(...colCounts);
+    if(maxCols < 2) return false;
+
+    // ¿cuántas filas tienen al menos 2 celdas con contenido? (filas "completas")
+    const fullRows = colCounts.filter(n => n >= 2).length;
+    if(fullRows < 3) return false;
+    if(fullRows / table.length < 0.5) return false;
+
+    // ¿las celdas contienen "contenido con sentido"? -> palabras de 3+ letras o números de 2+ dígitos
+    let meaningful = 0, totalCells = 0;
+    table.forEach(r => r.forEach(c => {
+      const cell = (c || '').trim();
+      if(!cell) return;
+      totalCells++;
+      if(/[a-záéíóúñü]{3,}/i.test(cell) || /\d{2,}/.test(cell)) meaningful++;
+    }));
+    if(totalCells === 0) return false;
+    return (meaningful / totalCells) >= 0.5;
+  }
+
+  // ==========================================================================
+  //  PIPELINE DE VISIÓN (modular): preprocesamiento -> OCR -> reconstrucción
+  //  -> post-proceso por tipo de columna -> segunda pasada dirigida.
+  // ==========================================================================
+
+  // --- Módulo 1: preprocesamiento. Devuelve { normal, inverted }.
+  //  'normal': texto oscuro sobre fondo claro (cuerpo de la tabla).
+  //  'inverted': invertida, para texto claro sobre fondo oscuro (encabezados).
+  //  Usa OpenCV si está disponible; si no, canvas + Otsu.
+  function preprocessImage(dataUrl){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        const minSide = Math.min(w, h);
+        let scale = minSide < 1600 ? 1600 / minSide : 1;
+        if (w * scale > 3200 || h * scale > 3200) scale = Math.min(3200 / w, 3200 / h);
+        const W = Math.round(w * scale), H = Math.round(h * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, W, H);
+
+        // Intento con OpenCV: gris + umbral adaptativo (normal e invertido)
+        if (window._cvReady && window.cv) {
+          try {
+            const src = cv.imread(canvas);
+            const gray = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+            const normalMat = new cv.Mat(), invMat = new cv.Mat();
+            cv.adaptiveThreshold(gray, normalMat, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 31, 15);
+            cv.adaptiveThreshold(gray, invMat, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 31, 15);
+            const outN = document.createElement('canvas');
+            const outI = document.createElement('canvas');
+            cv.imshow(outN, normalMat);
+            cv.imshow(outI, invMat);
+            src.delete(); gray.delete(); normalMat.delete(); invMat.delete();
+            resolve({ normal: outN.toDataURL('image/png'), inverted: outI.toDataURL('image/png'), W, H });
+            return;
+          } catch (e) { /* cae al respaldo canvas */ }
+        }
+
+        // Respaldo sin OpenCV: gris + Otsu, y su inversa
+        try {
+          const d = ctx.getImageData(0, 0, W, H);
+          const px = d.data;
+          const hist = new Array(256).fill(0);
+          for (let i = 0; i < px.length; i += 4) {
+            const g = (px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114) | 0;
+            px[i] = px[i+1] = px[i+2] = g;
+            hist[g]++;
+          }
+          const total = W * H;
+          let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+          let sumB = 0, wB = 0, maxVar = 0, thr = 127;
+          for (let t = 0; t < 256; t++) {
+            wB += hist[t]; if (!wB) continue;
+            const wF = total - wB; if (!wF) break;
+            sumB += t * hist[t];
+            const mB = sumB / wB, mF = (sum - sumB) / wF;
+            const between = wB * wF * (mB - mF) * (mB - mF);
+            if (between > maxVar) { maxVar = between; thr = t; }
+          }
+          // versión normal
+          const normalData = ctx.createImageData(W, H);
+          const invData = ctx.createImageData(W, H);
+          for (let i = 0; i < px.length; i += 4) {
+            const v = px[i] > thr ? 255 : 0;
+            normalData.data[i] = normalData.data[i+1] = normalData.data[i+2] = v;
+            normalData.data[i+3] = 255;
+            const iv = 255 - v;
+            invData.data[i] = invData.data[i+1] = invData.data[i+2] = iv;
+            invData.data[i+3] = 255;
+          }
+          const cN = document.createElement('canvas'); cN.width = W; cN.height = H;
+          cN.getContext('2d').putImageData(normalData, 0, 0);
+          const cI = document.createElement('canvas'); cI.width = W; cI.height = H;
+          cI.getContext('2d').putImageData(invData, 0, 0);
+          resolve({ normal: cN.toDataURL('image/png'), inverted: cI.toDataURL('image/png'), W, H });
+          return;
+        } catch (e) {
+          resolve({ normal: canvas.toDataURL('image/png'), inverted: null, W, H });
+        }
+      };
+      img.onerror = () => resolve({ normal: dataUrl, inverted: null });
+      img.src = dataUrl;
+    });
+  }
+
+  // fusiona palabras de dos pasadas OCR, evitando duplicar las que se solapan
+  function mergeWords(wordsA, wordsB){
+    const a = (wordsA || []).filter(w => w.text && w.text.trim());
+    const b = (wordsB || []).filter(w => w.text && w.text.trim());
+    const result = a.slice();
+    const overlaps = (w1, w2) => {
+      const cx1 = (w1.bbox.x0 + w1.bbox.x1)/2, cy1 = (w1.bbox.y0 + w1.bbox.y1)/2;
+      return cx1 >= w2.bbox.x0 && cx1 <= w2.bbox.x1 && cy1 >= w2.bbox.y0 && cy1 <= w2.bbox.y1;
+    };
+    for(const wb of b){
+      // solo añadimos palabras de la pasada invertida que NO se solapen con la normal
+      // (así el cuerpo no se duplica y el encabezado -sólo visible en la invertida- entra)
+      const dup = a.some(wa => overlaps(wb, wa) || overlaps(wa, wb));
+      if(!dup && (wb.confidence === undefined || wb.confidence > 40)) result.push(wb);
+    }
+    return result;
+  }
+
+  // --- worker persistente de Tesseract v5 ---
+  let _tessWorker = null;
+  async function getTessWorker(){
+    if(_tessWorker) return _tessWorker;
+    _tessWorker = await Tesseract.createWorker('spa');
+    return _tessWorker;
+  }
+
+  // OCR de imagen completa -> { text, words }
+  async function ocrFull(imageUrl, onProgress){
+    const worker = await getTessWorker();
+    await worker.setParameters({ tessedit_pageseg_mode: '6', tessedit_char_whitelist: '' });
+    const { data } = await worker.recognize(imageUrl, {}, { text: true, words: true });
+    return data;
+  }
+
+  // segunda pasada: re-OCR de UNA región (celda) con whitelist y PSM de línea
+  async function ocrCell(imageUrl, box, whitelist){
+    const worker = await getTessWorker();
+    await worker.setParameters({
+      tessedit_pageseg_mode: '7', // una sola línea
+      tessedit_char_whitelist: whitelist || ''
+    });
+    const pad = 4;
+    const rect = {
+      left: Math.max(0, box.x0 - pad),
+      top: Math.max(0, box.y0 - pad),
+      width: (box.x1 - box.x0) + pad*2,
+      height: (box.y1 - box.y0) + pad*2
+    };
+    const { data } = await worker.recognize(imageUrl, { rectangle: rect }, { text: true });
+    return (data.text || '').trim();
+  }
+
+  // carga un dataURL como Image (promesa)
+  function loadImage(url){
+    return new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = url;
+    });
+  }
+
+  // recorta una región de la imagen y la preprocesa agresivamente para OCR de celda:
+  // reescalado grande + escala de grises + binarización Otsu + normalización de polaridad.
+  // Devuelve un CANVAS binarizado (texto oscuro sobre fondo claro).
+  function cropBinarizedCanvas(imgEl, rect, opts){
+    opts = opts || {};
+    const scale = opts.scale || 4;
+    let sx = Math.max(0, rect.x0);
+    let sy = Math.max(0, rect.y0);
+    let sw = Math.max(1, rect.x1 - rect.x0);
+    let sh = Math.max(1, rect.y1 - rect.y0);
+    const c = document.createElement('canvas');
+    c.width = Math.round(sw * scale);
+    c.height = Math.round(sh * scale);
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(imgEl, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    try {
+      const d = ctx.getImageData(0, 0, c.width, c.height);
+      const px = d.data;
+      const hist = new Array(256).fill(0);
+      for (let i = 0; i < px.length; i += 4) {
+        const g = (px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114) | 0;
+        px[i] = px[i+1] = px[i+2] = g;
+        hist[g]++;
+      }
+      const total = c.width * c.height;
+      let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+      let sumB = 0, wB = 0, maxVar = 0, thr = 127;
+      for (let t = 0; t < 256; t++) {
+        wB += hist[t]; if (!wB) continue;
+        const wF = total - wB; if (!wF) break;
+        sumB += t * hist[t];
+        const mB = sumB / wB, mF = (sum - sumB) / wF;
+        const between = wB * wF * (mB - mF) * (mB - mF);
+        if (between > maxVar) { maxVar = between; thr = t; }
+      }
+      let darkCount = 0;
+      for (let t = 0; t <= thr; t++) darkCount += hist[t];
+      const bgIsDark = darkCount > total * 0.5;
+      for (let i = 0; i < px.length; i += 4) {
+        let v = px[i] > thr ? 255 : 0;
+        if (bgIsDark) v = 255 - v;
+        px[i] = px[i+1] = px[i+2] = v;
+      }
+      ctx.putImageData(d, 0, 0);
+    } catch (e) { /* si falla, se usa el recorte a color */ }
+    return c;
+  }
+
+  // perfil de tinta por columna (cuenta de píxeles oscuros por columna)
+  function columnInkProfile(canvas){
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const px = ctx.getImageData(0, 0, W, H).data;
+    const col = new Array(W).fill(0);
+    for (let x = 0; x < W; x++) {
+      let cnt = 0;
+      for (let y = 0; y < H; y++) {
+        const i = (y * W + x) * 4;
+        if (px[i] < 128) cnt++; // oscuro = texto
+      }
+      col[x] = cnt;
+    }
+    return col;
+  }
+
+  // encuentra dónde termina el texto y empieza el ícono de filtro (o W si no hay ícono)
+  function findIconCut(colInk, W, H){
+    const inkThresh = Math.max(1, H * 0.04);
+    const isInk = x => colInk[x] > inkThresh;
+    let x = W - 1;
+    while (x >= 0 && !isInk(x)) x--;
+    if (x < 0) return W;
+    const clusterEnd = x;
+    while (x >= 0 && isInk(x)) x--;
+    const clusterStart = x + 1;
+    const clusterWidth = clusterEnd - clusterStart + 1;
+    let gap = 0;
+    while (x >= 0 && !isInk(x)) { gap++; x--; }
+    const hasTextLeft = x >= 0;
+    const nearRight = clusterEnd >= W * 0.7;
+    const squareish = clusterWidth <= H * 1.4;   // ícono ≈ cuadrado; palabra es más ancha
+    const realGap = gap >= Math.max(3, H * 0.3);
+    if (hasTextLeft && nearRight && squareish && realGap) {
+      return clusterStart - Math.floor(gap * 0.3);
+    }
+    return W;
+  }
+
+  // recorta el ícono de filtro de un canvas binarizado; devuelve canvas (posiblemente más angosto)
+  function trimIconFromCanvas(canvas){
+    const W = canvas.width, H = canvas.height;
+    const colInk = columnInkProfile(canvas);
+    const cut = findIconCut(colInk, W, H);
+    if (cut < W - 2 && cut > W * 0.2) {
+      const c2 = document.createElement('canvas');
+      c2.width = Math.max(1, cut); c2.height = H;
+      c2.getContext('2d').drawImage(canvas, 0, 0, cut, H, 0, 0, cut, H);
+      return c2;
+    }
+    return canvas;
+  }
+
+  // limpia el texto OCR de una celda de encabezado
+  function cleanHeaderCell(text){
+    let t = (text || '').replace(/\s+/g, ' ').trim();
+    // quitar barras / caracteres de cuadrícula
+    t = t.replace(/[|¦\\\/]+/g, ' ').replace(/\s+/g, ' ').trim();
+    // quitar puntuación/ruido al inicio (apóstrofos, comillas, etc.)
+    t = t.replace(/^[^0-9A-Za-zÁÉÍÓÚÑáéíóúñ]+/, '');
+    // quitar número de fila de Excel al inicio ("1 Mes" -> "Mes")
+    t = t.replace(/^\d{1,3}\s+/, '');
+    // quitar tokens de ruido de 1-2 caracteres al final ("Real My" -> "Real")
+    t = t.replace(/\s+[A-Za-zÁÉÍÓÚÑáéíóúñ]{1,2}$/,'');
+    // quitar letra suelta al inicio seguida de palabra ("M Mes" -> "Mes")
+    t = t.replace(/^[A-Za-z]\s+(?=[A-Za-zÁÉÍÓÚÑáéíóúñ]{2,})/, '');
+    return t.trim();
+  }
+
+  // Genérico: no usa listas de palabras.
+  // Devuelve { header:[textos], debug:[{img,text,conf}] } o null.
+  async function extractHeaderCells(originalUrl, procW, procH, colExtents, band){
+    const worker = await getTessWorker();
+    let origImg;
+    try { origImg = await loadImage(originalUrl); } catch(e){ return null; }
+    const kx = origImg.naturalWidth / procW;
+    const ky = origImg.naturalHeight / procH;
+
+    const header = [];
+    const debug = [];
+    let nonEmpty = 0;
+
+    for (let i = 0; i < colExtents.length; i++) {
+      const cur = colExtents[i];
+      const prev = colExtents[i-1];
+      const w = Math.max(10, cur.right - cur.left);
+      // izquierda GENEROSA (el encabezado puede ser más ancho que el dato numérico)
+      const leftBound = prev ? (prev.right + cur.left) / 2 : Math.max(0, cur.left - w * 0.7);
+      // derecha con holgura para incluir TODO el texto; el ícono se recorta luego por contorno
+      const rightBound = cur.right + w * 0.35;
+
+      const rect = { x0: leftBound * kx, x1: rightBound * kx, y0: band.top * ky, y1: band.bottom * ky };
+
+      // pasadas: distinta resolución y modo de segmentación (línea vs palabra)
+      const passes = [
+        { scale: 5, psm: '7' },
+        { scale: 6, psm: '7' },
+        { scale: 6, psm: '8' }, // palabra única (segunda pasada si confianza baja)
+      ];
+
+      let best = { text: '', conf: -1, img: null };
+      for (let p = 0; p < passes.length; p++) {
+        try {
+          // recorte binarizado + corte del ícono por su contorno
+          let canvas = cropBinarizedCanvas(origImg, rect, { scale: passes[p].scale });
+          canvas = trimIconFromCanvas(canvas);
+          const url = canvas.toDataURL('image/png');
+
+          await worker.setParameters({ tessedit_pageseg_mode: passes[p].psm, tessedit_char_whitelist: '' });
+          const { data } = await worker.recognize(url, {}, { text: true });
+          const txt = cleanHeaderCell(data.text || '');
+          const conf = data.confidence || 0;
+
+          if (txt && /[a-záéíóúñü]{2,}/i.test(txt)) {
+            if (conf > best.conf + 3 || (Math.abs(conf - best.conf) <= 3 && txt.length > best.text.length)) {
+              best = { text: txt, conf, img: url };
+            }
+          } else if (!best.img) {
+            best.img = url; // guardar al menos una imagen para diagnóstico aunque no haya texto
+          }
+
+          // si ya tenemos confianza alta, no seguimos probando pasadas
+          if (best.conf >= 75) break;
+        } catch (e) { /* siguiente pasada */ }
+      }
+
+      if (best.text) nonEmpty++;
+      header.push(best.text);
+      debug.push({ img: best.img, text: best.text || '(vacío)', conf: Math.round(best.conf > 0 ? best.conf : 0) });
+    }
+
+    if (nonEmpty < Math.ceil(colExtents.length / 2)) return { header: null, debug };
+    return { header, debug };
+  }
+
+  // calcula extensiones de columna y banda del encabezado a partir de las celdas del cuerpo
+  function computeHeaderGeometry(reconText, reconBoxes){
+    // identificar filas de datos (no "chrome" de Excel, no vacías)
+    const isChromeRow = r => {
+      const ne = r.filter(c => c && c.trim().length);
+      if(!ne.length) return true;
+      const hasWord = ne.some(c => /[a-záéíóúñü]{3,}/i.test(c.trim()));
+      if(hasWord) return false;
+      return ne.every(c => /^[A-Za-z]$/.test(c.trim()) || /^\d{1,3}$/.test(c.trim()));
+    };
+    let firstDataIdx = -1;
+    for(let i=0;i<reconText.length;i++){
+      const ne = reconText[i].filter(c => c && c.trim().length);
+      if(ne.length >= 2 && !isChromeRow(reconText[i])){ firstDataIdx = i; break; }
+    }
+    if(firstDataIdx < 0) return null;
+
+    const colCount = Math.max(...reconBoxes.map(r => r.length));
+    const colExtents = [];
+    for(let c=0;c<colCount;c++){
+      let left = Infinity, right = -Infinity;
+      for(let i=firstDataIdx;i<reconBoxes.length;i++){
+        const b = reconBoxes[i][c];
+        if(b){ left = Math.min(left, b.x0); right = Math.max(right, b.x1); }
+      }
+      if(left === Infinity) { colExtents.push(null); }
+      else colExtents.push({ left, right });
+    }
+    const validCols = colExtents.filter(Boolean);
+    if(validCols.length < 2) return null;
+
+    // altura y tope de la primera fila de datos
+    let firstTop = Infinity, heights = [];
+    reconBoxes[firstDataIdx].forEach(b => { if(b){ firstTop = Math.min(firstTop, b.y0); heights.push(b.y1-b.y0); } });
+    if(firstTop === Infinity) return null;
+    heights.sort((a,b)=>a-b);
+    const rowH = heights[Math.floor(heights.length/2)] || 20;
+
+    const band = {
+      top: Math.max(0, firstTop - rowH * 1.4),
+      bottom: Math.max(1, firstTop - rowH * 0.1)
+    };
+    return { colExtents: validCols, band };
+  }
+
+  async function imageToMarkdown(file, onProgress){
+    const originalUrl = await readAsDataUrl(file);
+    if(onProgress) onProgress({ recognized: 0.05, stage: 'preprocesando' });
+    const proc = await preprocessImage(originalUrl);
+    const procUrl = proc.normal;
+
+    // --- OCR principal sobre la versión normal ---
+    let data = null;
+    let rawNormalText = '', rawInvText = '';
+    try{
+      data = await ocrFull(procUrl, onProgress);
+      rawNormalText = data && data.text ? data.text : '';
+    }catch(e){ data = null; }
+
+    // --- segunda lectura sobre la versión invertida, para encabezados oscuros ---
+    // (texto claro sobre fondo oscuro que la versión normal no capta)
+    if(proc.inverted){
+      if(onProgress) onProgress({ recognized: 0.5, stage: 'leyendo encabezados' });
+      try{
+        const dataInv = await ocrFull(proc.inverted, null);
+        rawInvText = dataInv && dataInv.text ? dataInv.text : '';
+        if(data && data.words && dataInv && dataInv.words){
+          data.words = mergeWords(data.words, dataInv.words);
+        } else if(!data && dataInv){
+          data = dataInv;
+        }
+      }catch(e){ /* si falla, seguimos solo con la normal */ }
+    }
+    if(onProgress) onProgress({ recognized: 0.7, stage: 'analizando estructura' });
+
+    const diagnostic = 'LECTURA NORMAL:\n' + (rawNormalText.trim() || '(vacío)') +
+      '\n\nLECTURA INVERTIDA (para encabezados oscuros):\n' + (rawInvText.trim() || '(vacío)');
+
+    const rawText = data && data.text ? data.text.trim() : '';
+
+    // --- reconstrucción de tabla con bounding boxes ---
+    let recon = null;
+    try{ recon = wordsToTable(data && data.words, true); }catch(e){ recon = null; }
+
+    if(recon){
+      let cleanedText = cleanOcrTable(recon.text);
+      if(tableIsSolid(cleanedText)){
+        // detectar si hay encabezado real; si no, todas son filas de datos
+        const hasHeader = looksLikeHeader(cleanedText);
+        // post-procesar: inferir tipos, normalizar, detectar celdas inválidas
+        let pp = postProcessTable(cleanedText, { hasHeader });
+
+        // --- segunda pasada dirigida sobre celdas que fallaron validación ---
+        if(pp.failures.length){
+          if(onProgress) onProgress({ recognized: 0.8, stage: 're-leyendo celdas dudosas' });
+          for(const f of pp.failures){
+            const box = recon.boxes[f.r] && recon.boxes[f.r][f.c];
+            if(!box) continue;
+            const wl = whitelistFor(f.type);
+            try{
+              const reread = await ocrCell(procUrl, box, wl);
+              if(reread){
+                const norm = normalizeCell(reread, f.type);
+                if(validateCell(norm, f.type)){
+                  pp.table[f.r][f.c] = norm; // corregido por segunda pasada
+                }
+              }
+            }catch(e){ /* si falla, dejamos el valor original */ }
+          }
+          // re-normalizar meses tras la segunda pasada
+          pp = postProcessTable(pp.table, { hasHeader });
+        }
+
+        // --- extracción de encabezado por celdas (si el OCR de página no lo leyó) ---
+        let headerDiag = '';
+        let headerDebug = null;
+        if(!hasHeader){
+          if(onProgress) onProgress({ recognized: 0.92, stage: 'leyendo encabezado celda por celda' });
+          try{
+            const geom = computeHeaderGeometry(recon.text, recon.boxes);
+            if(geom){
+              const res = await extractHeaderCells(
+                originalUrl, proc.W || 0, proc.H || 0, geom.colExtents, geom.band
+              );
+              headerDebug = res && res.debug ? res.debug : null;
+              const headerCells = res ? res.header : null;
+              if(headerCells){
+                const ncol = pp.table[0] ? pp.table[0].length : headerCells.length;
+                while(headerCells.length < ncol) headerCells.push('');
+                headerCells.length = ncol;
+                pp.table.unshift(headerCells.slice());
+                headerDiag = '\n\nENCABEZADO (OCR por celda): ' + headerCells.join(' | ');
+              } else {
+                headerDiag = '\n\nENCABEZADO (OCR por celda): no se pudo leer con suficiente confianza';
+              }
+            } else {
+              headerDiag = '\n\nENCABEZADO: no se pudo localizar la banda del encabezado';
+            }
+          }catch(e){ headerDiag = '\n\nENCABEZADO (OCR por celda): error - ' + (e && e.message ? e.message : e); }
+        }
+
+        if(onProgress) onProgress({ recognized: 1, stage: 'listo' });
+        return { markdown: rowsToMarkdownTable(pp.table), looksLikeTable: true, columnTypes: pp.columnTypes, diagnostic: diagnostic + headerDiag, headerDebug };
+      }
+    }
+
+    // --- texto legible pero no tabla ---
+    if(rawText && !isGibberish(rawText)){
+      return { markdown: plainTextToMarkdown(rawText), looksLikeTable: false, diagnostic };
+    }
+
+    // --- sin texto: clasificar objeto ---
+    const cls = await classifyImage(originalUrl);
+    if(cls){
+      const pct = Math.round(cls.confidence * 100);
+      const colors = await analyzeImageColors(originalUrl);
+      let lines = [`**${cls.label}**`, ''];
+      if(colors){
+        lines.push(`- Color predominante: ${colors.subjectColor}`);
+        lines.push(`- Fondo: ${colors.bgBrightness}, tono ${colors.bgColor}`);
+      }
+      lines.push(`- Confianza de identificación: ${pct}%`);
+      lines.push('');
+      lines.push('_Descripción automática. Esta imagen no contiene texto para convertir a Markdown._');
+      return { markdown: lines.join('\n'), looksLikeTable: false, isDescription: true };
+    }
+
+    // --- nada funcionó ---
+    return {
+      markdown: '_No se pudo reconocer el contenido de esta imagen._\n\nNo tiene texto legible para convertir, y no fue posible identificar con seguridad qué muestra. Intenta con una imagen más nítida o mejor iluminada.' +
+        (_lastClassifyError ? '\n\n_Detalle técnico: ' + _lastClassifyError + '_' : ''),
+      looksLikeTable: false,
+      failed: true
+    };
+  }
+
+  async function fileToMarkdown(file, onProgress){
+    const name = file.name;
+    const ext = name.split('.').pop().toLowerCase();
+
+    if(ext === 'docx'){
+      const buffer = await readAsArrayBuffer(file);
+      const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+      return { markdown: td.turndown(result.value), kind: 'archivo .docx' };
+    }
+    if(ext === 'pdf'){
+      const markdown = await pdfToMarkdown(file);
+      return { markdown, kind: 'archivo .pdf (texto extraído)' };
+    }
+    if(ext === 'xlsx' || ext === 'xls'){
+      const markdown = await xlsxToMarkdown(file);
+      return { markdown, kind: `archivo .${ext} (tabla)` };
+    }
+    if(['jpg','jpeg','png','webp','bmp'].includes(ext)){
+      const ocr = await imageToMarkdown(file, onProgress);
+      let kind = 'imagen (OCR)';
+      if(ocr.looksLikeTable) kind = 'imagen (OCR, tabla)';
+      else if(ocr.isDescription) kind = 'imagen (objeto detectado)';
+      else if(ocr.failed) kind = 'imagen (no reconocida)';
+      return { markdown: ocr.markdown, kind, diagnostic: ocr.diagnostic, headerDebug: ocr.headerDebug };
+    }
+    if(ext === 'csv'){
+      const text = await readAsText(file);
+      return { markdown: csvToMarkdown(text), kind: 'archivo .csv (tabla)' };
+    }
+    // .txt u otro texto plano
+    const text = await readAsText(file);
+    if(looksLikeTabularText(text)){
+      return { markdown: tabbedTextToMarkdown(text), kind: 'archivo .txt (tabla)' };
+    }
+    return { markdown: plainTextToMarkdown(text), kind: 'archivo .txt' };
+  }
+
+  function loadingRow(){
+    const row = document.createElement('div');
+    row.className = 'row assistant loading-row';
+    row.innerHTML = `
+      <div class="bubble">
+        <div class="card loading">
+          <div class="md-body">convirtiendo…</div>
+        </div>
+      </div>`;
+    return row;
+  }
+
+  async function handleFile(file){
+    const ALLOWED = ['docx','csv','txt','pdf','xlsx','xls','jpg','jpeg','png','webp','bmp'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if(!ALLOWED.includes(ext)){
+      messages.push({ role:'user', content:'', isFile:true, fileName: file.name });
+      messages.push({
+        role:'assistant',
+        markdown: 'Por ahora soporto .docx, .pdf, .xlsx, .csv, .txt e imágenes (.jpg/.png/.webp) con OCR.',
+        kind: 'no soportado',
+        stats:{ before:0, after:0, tokBefore:0, tokAfter:0 }
+      });
+      persist();
+      render();
+      return;
+    }
+
+    messages.push({ role:'user', content:'', isFile:true, fileName: file.name });
+    persist();
+    render();
+
+    const temp = loadingRow();
+    chatEl.appendChild(temp);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    const tempBody = temp.querySelector('.md-body');
+    const isImage = ['jpg','jpeg','png','webp','bmp'].includes(ext);
+    if(isImage) tempBody.textContent = 'analizando imagen… 0%';
+
+    try{
+      const onProgress = isImage ? (p) => {
+        if(p && p.stage){
+          const pct = p.recognized !== undefined ? Math.round(p.recognized * 100) : 0;
+          tempBody.textContent = `${p.stage}… ${pct}%`;
+        } else if(p && p.recognized !== undefined){
+          tempBody.textContent = `analizando imagen… ${Math.round(p.recognized * 100)}%`;
+        }
+      } : null;
+      const { markdown, kind, diagnostic, headerDebug } = await fileToMarkdown(file, onProgress);
+      const before = file.size; // aproximación: tamaño del archivo original
+      const after = markdown.length;
+      messages.push({
+        role:'assistant',
+        markdown, kind, diagnostic, headerDebug,
+        stats:{
+          before, after,
+          tokBefore: estimateTokens(' '.repeat(before)), // aproximación gruesa
+          tokAfter: estimateTokens(markdown)
+        }
+      });
+    } catch(err){
+      const msg = isImage
+        ? 'No se pudo reconocer el texto de esta imagen. Intenta con una foto o captura más nítida, mejor iluminada o recortada solo al contenido que quieres convertir.'
+        : 'No pude leer ese archivo. ¿Seguro que es válido y no está dañado o protegido?';
+      messages.push({
+        role:'assistant',
+        markdown: msg + '\n\n_Detalle técnico: ' + (err && err.message ? err.message : String(err)) + '_',
+        kind: 'error',
+        stats:{ before:0, after:0, tokBefore:0, tokAfter:0 }
+      });
+    }
+    persist();
+    render();
+  }
+
+  // ---------- estimación de tokens ----------
+  function estimateTokens(s){ return Math.max(1, Math.round(s.length / 4)); }
+
+  // ---------- render ----------
+  function render(){
+    chatEl.innerHTML = '';
+    if(messages.length === 0){
+      chatEl.appendChild(introBubble());
+    }
+    messages.forEach(m => {
+      chatEl.appendChild(m.role === 'user' ? userBubble(m) : assistantBubble(m));
+    });
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function introBubble(){
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    const undo = lastCleared
+      ? `<div class="assistant-note" style="margin-top:6px"><span class="gt">&gt;</span>Chat vaciado. <button id="undoClear" style="font-family:var(--mono);font-size:11.5px;background:transparent;border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--accent-2)">deshacer</button></div>`
+      : '';
+    row.innerHTML = `
+      <div class="bubble">
+        <div class="assistant-note"><span class="gt">&gt;</span>Pega una tabla de Excel/Sheets, un párrafo de Word, HTML, texto suelto o una imagen, y presiona Enter. O adjunta un archivo .docx, .pdf, .xlsx, .csv, .txt o una foto/captura con 📎 o arrastrándolo aquí. Te devuelvo el Markdown listo para copiar en tu IA.</div>
+        ${undo}
+      </div>`;
+    return row;
+  }
+
+  function userBubble(m){
+    const row = document.createElement('div');
+    row.className = 'row user';
+    if(m.isFile){
+      row.innerHTML = `
+        <div class="bubble">
+          <div class="file-chip">📎 ${escapeHtml(m.fileName)}</div>
+        </div>`;
+      return row;
+    }
+    const preview = m.content.length > 600 ? m.content.slice(0,600) + '…' : m.content;
+    row.innerHTML = `
+      <div class="bubble">
+        <div class="label">pegado</div>
+        <pre></pre>
+      </div>`;
+    row.querySelector('pre').textContent = preview;
+    return row;
+  }
+
+  function escapeHtml(s){
+    return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function assistantBubble(m){
+    const row = document.createElement('div');
+    row.className = 'row assistant';
+    const before = m.stats.before, after = m.stats.after;
+    const savedPct = before > 0 ? Math.round((1 - after/before) * 100) : 0;
+    row.innerHTML = `
+      <div class="bubble">
+        <div class="assistant-note"><span class="gt">&gt;</span>detectado: ${m.kind}</div>
+        <div class="card">
+          <div class="md-body"></div>
+          <div class="toolbar">
+            <div class="receipt">
+              ~${m.stats.tokBefore} <span class="dot">→</span> <b>~${m.stats.tokAfter} tokens</b>
+              <span class="dot">·</span> ${savedPct > 0 ? '-' + savedPct + '%' : 'sin cambio'}
+            </div>
+            <div class="actions">
+              <button data-act="copy">copiar</button>
+              <button data-act="dl">.md</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    row.querySelector('.md-body').textContent = m.markdown;
+    row.querySelector('[data-act="copy"]').addEventListener('click', (e)=>{
+      navigator.clipboard.writeText(m.markdown);
+      flashLabel(e.target, 'copiado ✓');
+    });
+    row.querySelector('[data-act="dl"]').addEventListener('click', ()=>{
+      downloadMd(m.markdown);
+    });
+
+    // desplegable de diagnóstico OCR (solo para resultados de imagen)
+    if(m.diagnostic || m.headerDebug){
+      const det = document.createElement('details');
+      det.style.cssText = 'margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--ink-muted);';
+      const sum = document.createElement('summary');
+      sum.textContent = 'ver lectura OCR (diagnóstico)';
+      sum.style.cssText = 'cursor:pointer;user-select:none;';
+      det.appendChild(sum);
+
+      // recortes del encabezado (imágenes reales que se pasaron al OCR)
+      if(m.headerDebug && m.headerDebug.length){
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'margin-top:8px;';
+        const title = document.createElement('div');
+        title.textContent = 'Recortes del encabezado (lo que "ve" el OCR por celda):';
+        title.style.cssText = 'margin-bottom:6px;';
+        wrap.appendChild(title);
+        m.headerDebug.forEach((cell, idx) => {
+          const cellDiv = document.createElement('div');
+          cellDiv.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:4px;border:1px solid var(--line);border-radius:6px;background:#fff;';
+          if(cell.img){
+            const im = document.createElement('img');
+            im.src = cell.img;
+            im.style.cssText = 'height:26px;max-width:180px;image-rendering:pixelated;border:1px solid var(--line);background:#fff;';
+            cellDiv.appendChild(im);
+          }
+          const label = document.createElement('span');
+          label.textContent = `col ${idx+1}: "${cell.text}" (conf ${cell.conf}%)`;
+          cellDiv.appendChild(label);
+          wrap.appendChild(cellDiv);
+        });
+        det.appendChild(wrap);
+      }
+
+      if(m.diagnostic){
+        const pre = document.createElement('pre');
+        pre.textContent = m.diagnostic;
+        pre.style.cssText = 'white-space:pre-wrap;background:#FAFAF6;border:1px solid var(--line);border-radius:6px;padding:8px;margin-top:6px;max-height:200px;overflow:auto;';
+        det.appendChild(pre);
+      }
+      row.querySelector('.bubble').appendChild(det);
+    }
+    return row;
+  }
+
+  function flashLabel(btn, text){
+    const original = btn.textContent;
+    btn.textContent = text;
+    setTimeout(()=> btn.textContent = original, 1200);
+  }
+
+  function downloadMd(text){
+    const blob = new Blob([text], {type:'text/markdown'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ligero-' + Date.now() + '.md';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- envío ----------
+  function send(){
+    const raw = ta.value;
+    if(!raw.trim()) return;
+
+    const result = convert(raw);
+    const before = raw.length;
+    const after = result.markdown.length;
+
+    messages.push({ role:'user', content: raw });
+    messages.push({
+      role:'assistant',
+      markdown: result.markdown,
+      kind: result.kind,
+      stats: {
+        before, after,
+        tokBefore: estimateTokens(raw),
+        tokAfter: estimateTokens(result.markdown)
+      }
+    });
+
+    persist();
+    render();
+
+    ta.value = '';
+    lastPastedHTML = null;
+    lastPastedPlain = null;
+    autoGrow();
+  }
+
+  // ---------- captura del portapapeles rico ----------
+  ta.addEventListener('paste', (e)=>{
+    const items = e.clipboardData.files;
+    if(items && items.length && items[0].type.startsWith('image/')){
+      e.preventDefault();
+      handleFile(items[0]);
+      return;
+    }
+    const html = e.clipboardData.getData('text/html');
+    const plain = e.clipboardData.getData('text/plain');
+    if(html){
+      lastPastedHTML = html;
+      lastPastedPlain = plain;
+    } else {
+      lastPastedHTML = null;
+      lastPastedPlain = null;
+    }
+    // deja que el pegado normal (texto plano) llene el textarea
+    setTimeout(autoGrow, 0);
+  });
+
+  ta.addEventListener('input', autoGrow);
+  ta.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      send();
+    }
+  });
+  sendBtn.addEventListener('click', send);
+
+  function autoGrow(){
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 220) + 'px';
+  }
+
+  const clipBtn = document.getElementById('clipBtn');
+  const fileInput = document.getElementById('fileInput');
+  const dropOverlay = document.getElementById('dropOverlay');
+  let dragCounter = 0;
+
+  clipBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(f) handleFile(f);
+    fileInput.value = '';
+  });
+
+  window.addEventListener('dragenter', (e)=>{
+    e.preventDefault();
+    dragCounter++;
+    dropOverlay.classList.add('active');
+  });
+  window.addEventListener('dragover', (e)=> e.preventDefault());
+  window.addEventListener('dragleave', ()=>{
+    dragCounter--;
+    if(dragCounter <= 0){ dragCounter = 0; dropOverlay.classList.remove('active'); }
+  });
+  window.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) handleFile(f);
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(!messages.length) return;
+    lastCleared = messages;
+    messages = [];
+    persist();
+    render();
+  });
+
+  chatEl.addEventListener('click', (e)=>{
+    if(e.target && e.target.id === 'undoClear' && lastCleared){
+      messages = lastCleared;
+      lastCleared = null;
+      persist();
+      render();
+    }
+  });
+
+  // ---------- persistencia local ----------
+  function persist(){
+    try{
+      // no persistir headerDebug (contiene imágenes base64 pesadas)
+      const slim = messages.map(m => {
+        if(m.headerDebug){ const c = Object.assign({}, m); delete c.headerDebug; return c; }
+        return m;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+    }catch(e){}
+  }
+  function restore(){
+    try{
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if(saved) messages = JSON.parse(saved);
+    }catch(e){ messages = []; }
+  }
+
+  restore();
+  render();
+  autoGrow();
+})();
+</script>
+</body>
+</html>
