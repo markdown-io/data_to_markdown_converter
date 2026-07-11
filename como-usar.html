@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cómo usar — Convertidor</title>
+<meta name="description" content="Aprende a convertir tablas, documentos, PDF e imágenes a formato Markdown para usar con IA, paso a paso.">
+<link rel="stylesheet" href="paginas.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="hash">#</span>
+    <a class="name" href="index.html">Convertidor</a>
+    <span class="tag">markdown para IA</span>
+  </div>
+  <div class="header-actions">
+    <nav class="topnav">
+      <a href="como-usar.html" class="active">Cómo usar</a>
+      <a href="beneficios.html">Beneficios</a>
+      <a href="privacidad.html">Privacidad</a>
+    </nav>
+    <button class="ghost icon-btn" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
+    <a class="cta" href="index.html">Abrir herramienta</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="filename"><span class="dot"></span>como-usar.md</div>
+  <h1><span class="hash">#</span>Cómo usar el Convertidor</h1>
+  <p class="lead">Convierte tablas, documentos, PDF e imágenes a Markdown limpio en segundos. Todo ocurre en tu navegador: sin cuenta, sin instalar nada.</p>
+</section>
+
+<main>
+  <h2><span class="mark">##</span> ¿Qué es Markdown y por qué usarlo con IA?</h2>
+  <p>Markdown es una forma sencilla de dar formato a texto usando símbolos simples (como <code>#</code> para títulos o <code>|</code> para tablas). Cuando pegas una tabla desordenada en una IA como ChatGPT o Claude, muchas veces se descoloca y el modelo la entiende mal. En Markdown la estructura queda clara, la IA la interpreta mejor y además consume menos <strong>tokens</strong> (las unidades que gastan los modelos).</p>
+
+  <h2><span class="mark">##</span> Tres formas de convertir</h2>
+
+  <div class="step">
+    <div class="num">1</div>
+    <div class="body">
+      <h3>Pegar texto o tablas</h3>
+      <p>Copia una tabla de Excel, Google Sheets o Word, o cualquier texto, y pégalo en el cuadro. Presiona <strong>Enter</strong> y recibes el Markdown al instante. Es la forma más precisa para tablas.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">2</div>
+    <div class="body">
+      <h3>Subir un archivo</h3>
+      <p>Usa el botón 📎 (o arrastra el archivo al cuadro) para convertir documentos completos.</p>
+      <div>
+        <span class="pill">.docx</span><span class="pill">.pdf</span><span class="pill">.xlsx</span>
+        <span class="pill">.csv</span><span class="pill">.txt</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="num">3</div>
+    <div class="body">
+      <h3>Convertir una imagen</h3>
+      <p>Sube una foto o captura (o pégala con <strong>Ctrl+V</strong>). La herramienta lee el texto de la imagen y lo convierte. Si es una tabla, intenta reconstruirla; si no tiene texto, describe lo que hay en ella.</p>
+    </div>
+  </div>
+
+  <h2><span class="mark">##</span> Después de convertir</h2>
+  <ul>
+    <li><strong>Copiar:</strong> con un clic copias el Markdown al portapapeles, listo para pegar en tu IA.</li>
+    <li><strong>Descargar:</strong> guarda el resultado como archivo <code>.md</code>.</li>
+    <li><strong>Ahorro de tokens:</strong> cada conversión te muestra cuántos tokens aproximados ahorras.</li>
+  </ul>
+  <div class="token-badge">~120 tokens <b>→</b> ~45 tokens</div>
+
+  <div class="note">
+    Entre más nítida y mejor recortada esté una captura, más preciso es el resultado. Para tablas, siempre que puedas, pegar directamente o subir el archivo original da el resultado más exacto.
+  </div>
+
+  <h2><span class="mark">##</span> Modo claro y oscuro</h2>
+  <p>Usa el botón 🌙 / ☀️ en la parte superior para cambiar entre tema claro y oscuro. Tu preferencia queda guardada en tu navegador.</p>
+
+  <p style="margin-top:32px;"><a class="cta" href="index.html">Abrir la herramienta →</a></p>
+</main>
+
+<footer class="site-footer">
+  © <span id="year"></span> <strong>KODAMA LaB</strong><span class="sep">·</span>Todos los derechos reservados<span class="sep">·</span><a href="privacidad.html">Privacidad</a>
+</footer>
+
+<script>
+  (function(){
+    var btn = document.getElementById('themeBtn');
+    var KEY = 'convertidor_theme';
+    function apply(t){
+      if(t==='dark'){ document.documentElement.setAttribute('data-theme','dark'); btn.textContent='☀️'; }
+      else { document.documentElement.removeAttribute('data-theme'); btn.textContent='🌙'; }
+    }
+    var saved=null; try{ saved=localStorage.getItem(KEY); }catch(e){}
+    if(!saved){ saved=(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'; }
+    apply(saved);
+    btn.addEventListener('click', function(){
+      var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+      var next=isDark?'light':'dark'; apply(next);
+      try{ localStorage.setItem(KEY,next); }catch(e){}
+    });
+    var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();
+  })();
+</script>
+</body>
+</html>

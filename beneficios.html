@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beneficios — Convertidor</title>
+<meta name="description" content="Por qué usar el Convertidor a Markdown: privado, sin servidores, gratis y optimizado para ahorrar tokens con IA.">
+<link rel="stylesheet" href="paginas.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="hash">#</span>
+    <a class="name" href="index.html">Convertidor</a>
+    <span class="tag">markdown para IA</span>
+  </div>
+  <div class="header-actions">
+    <nav class="topnav">
+      <a href="como-usar.html">Cómo usar</a>
+      <a href="beneficios.html" class="active">Beneficios</a>
+      <a href="privacidad.html">Privacidad</a>
+    </nav>
+    <button class="ghost icon-btn" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
+    <a class="cta" href="index.html">Abrir herramienta</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="filename"><span class="dot"></span>beneficios.md</div>
+  <h1><span class="hash">#</span>Beneficios</h1>
+  <p class="lead">Una herramienta pensada para quienes usan IA a diario y quieren pasarle información ordenada, rápida y sin complicaciones.</p>
+</section>
+
+<main>
+  <h2><span class="mark">##</span> Tu información nunca sale de tu dispositivo</h2>
+  <div class="card">
+    <p>El punto más importante: <strong>todo el procesamiento ocurre dentro de tu propio navegador</strong>. Cuando pegas un texto, subes un documento o una imagen, el archivo <strong>no se envía a ningún servidor</strong> — se procesa localmente en tu computadora o teléfono.</p>
+    <p>No vemos, no guardamos ni tenemos acceso a lo que conviertes. Ideal si trabajas con documentos privados o información sensible.</p>
+  </div>
+
+  <h2><span class="mark">##</span> No almacenamos datos de los usuarios</h2>
+  <p>No pedimos registro, no creamos cuentas y no guardamos tus documentos en ninguna base de datos. Lo único que se guarda es tu historial de conversiones y tu preferencia de tema, y se guarda <strong>únicamente en tu propio navegador</strong> (en algo llamado <code>localStorage</code>), que solo tú puedes ver. Puedes borrarlo cuando quieras con el botón "vaciar chat".</p>
+
+  <h2><span class="mark">##</span> Ahorra tokens al usar IA</h2>
+  <p>Los modelos de IA cobran y limitan por <strong>tokens</strong>. Una tabla pegada en desorden gasta muchos y confunde al modelo. El mismo contenido en Markdown es más compacto y claro: gastas menos y obtienes mejores respuestas.</p>
+  <div class="token-badge">menos tokens <b>=</b> menor costo + mejores respuestas</div>
+
+  <h2><span class="mark">##</span> Gratis y sin límites artificiales</h2>
+  <p>No hay muros de pago, ni cuentas premium, ni un número máximo de conversiones. Como todo corre en tu navegador, puedes usarlo tanto como quieras.</p>
+
+  <h2><span class="mark">##</span> Muchos formatos, un solo lugar</h2>
+  <ul>
+    <li>Tablas de <strong>Excel, Google Sheets y Word</strong> pegadas directamente.</li>
+    <li>Archivos <strong>.docx, .pdf, .xlsx, .csv y .txt</strong>.</li>
+    <li><strong>Imágenes</strong> (fotos y capturas) con reconocimiento de texto.</li>
+    <li>Texto y HTML pegados.</li>
+  </ul>
+
+  <h2><span class="mark">##</span> Funciona en cualquier dispositivo</h2>
+  <p>Al ser una página web, funciona en computadora, tablet o teléfono, sin instalar aplicaciones. Solo necesitas un navegador.</p>
+
+  <div class="note">
+    Privado por diseño, rápido, gratis y hecho para ahorrarte tiempo y tokens cuando trabajas con IA.
+  </div>
+
+  <p style="margin-top:32px;"><a class="cta" href="index.html">Probar ahora →</a></p>
+</main>
+
+<footer class="site-footer">
+  © <span id="year"></span> <strong>KODAMA LaB</strong><span class="sep">·</span>Todos los derechos reservados<span class="sep">·</span><a href="privacidad.html">Privacidad</a>
+</footer>
+
+<script>
+  (function(){
+    var btn = document.getElementById('themeBtn');
+    var KEY = 'convertidor_theme';
+    function apply(t){
+      if(t==='dark'){ document.documentElement.setAttribute('data-theme','dark'); btn.textContent='☀️'; }
+      else { document.documentElement.removeAttribute('data-theme'); btn.textContent='🌙'; }
+    }
+    var saved=null; try{ saved=localStorage.getItem(KEY); }catch(e){}
+    if(!saved){ saved=(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'; }
+    apply(saved);
+    btn.addEventListener('click', function(){
+      var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+      var next=isDark?'light':'dark'; apply(next);
+      try{ localStorage.setItem(KEY,next); }catch(e){}
+    });
+    var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();
+  })();
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Ligero — convierte a Markdown</title>
+<title>Convertidor — convierte a Markdown</title>
 <style>
   :root{
     --bg:#EDEFE7;
@@ -14,8 +14,21 @@
     --accent:#C98A2B;
     --accent-2:#3F6E52;
     --line:#D7DACB;
+    --surface-2:#FAFAF6;
     --mono: ui-monospace, 'SFMono-Regular', 'IBM Plex Mono', Menlo, Consolas, monospace;
     --sans: -apple-system, 'Segoe UI', 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  html[data-theme="dark"]{
+    --bg:#1A1D19;
+    --surface:#242822;
+    --ink:#E8EAE1;
+    --ink-muted:#9AA391;
+    --user-bg:#3F6E52;
+    --user-fg:#F3F4EE;
+    --accent:#E0A94A;
+    --accent-2:#6DAE82;
+    --line:#39402F;
+    --surface-2:#2C312A;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
@@ -60,6 +73,31 @@
     transition:border-color .15s, color .15s;
   }
   button.ghost:hover{border-color:var(--ink-muted); color:var(--ink);}
+  .header-actions{display:flex; align-items:center; gap:10px;}
+  .topnav{display:none;}
+  @media (min-width:720px){
+    .topnav{display:flex; gap:4px; align-items:center;}
+    .topnav a{
+      font-family:var(--mono); font-size:12.5px; color:var(--ink-muted);
+      text-decoration:none; padding:6px 10px; border-radius:6px;
+      transition:color .15s, background .15s;
+    }
+    .topnav a:hover{color:var(--ink); background:var(--surface-2);}
+  }
+  .icon-btn{padding:7px 10px; line-height:1;}
+  footer.site-footer{
+    flex:0 0 auto;
+    text-align:center;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-muted);
+    padding:8px 16px;
+    border-top:1px solid var(--line);
+    background:var(--bg);
+  }
+  footer.site-footer a{color:var(--ink-muted); text-decoration:none;}
+  footer.site-footer a:hover{color:var(--accent-2);}
+  footer.site-footer .sep{opacity:.4; margin:0 6px;}
 
   /* ---------- chat area ---------- */
   #chat{
@@ -113,7 +151,7 @@
     justify-content:space-between;
     padding:8px 12px;
     border-top:1px dashed var(--line);
-    background:#FAFAF6;
+    background:var(--surface-2);
   }
   .toolbar .actions{display:flex; gap:6px;}
   .toolbar button{
@@ -255,11 +293,19 @@
 <header>
   <div class="brand">
     <span class="hash">#</span>
-    <h1>Ligero</h1>
+    <h1>Convertidor</h1>
     <span class="tag">markdown para IA</span>
     <span class="brand-sub">pega texto, tablas o HTML → recibe Markdown limpio</span>
   </div>
-  <button class="ghost" id="clearBtn">vaciar chat</button>
+  <div class="header-actions">
+    <nav class="topnav">
+      <a href="como-usar.html">Cómo usar</a>
+      <a href="beneficios.html">Beneficios</a>
+      <a href="privacidad.html">Privacidad</a>
+    </nav>
+    <button class="ghost icon-btn" id="themeBtn" title="Cambiar tema claro/oscuro" aria-label="Cambiar tema">🌙</button>
+    <button class="ghost" id="clearBtn">vaciar chat</button>
+  </div>
 </header>
 
 <div id="dropOverlay">
@@ -277,6 +323,10 @@
   </div>
   <div id="hint">Enter para convertir · Shift+Enter para salto de línea · 📎 o pega una imagen · nada se sube a ningún servidor</div>
 </div>
+
+<footer class="site-footer">
+  © <span id="year"></span> <strong>KODAMA LaB</strong><span class="sep">·</span>Todos los derechos reservados<span class="sep">·</span><a href="privacidad.html">Privacidad</a>
+</footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
@@ -1641,7 +1691,7 @@
         wrap.appendChild(title);
         m.headerDebug.forEach((cell, idx) => {
           const cellDiv = document.createElement('div');
-          cellDiv.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:4px;border:1px solid var(--line);border-radius:6px;background:#fff;';
+          cellDiv.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--surface);';
           if(cell.img){
             const im = document.createElement('img');
             im.src = cell.img;
@@ -1659,7 +1709,7 @@
       if(m.diagnostic){
         const pre = document.createElement('pre');
         pre.textContent = m.diagnostic;
-        pre.style.cssText = 'white-space:pre-wrap;background:#FAFAF6;border:1px solid var(--line);border-radius:6px;padding:8px;margin-top:6px;max-height:200px;overflow:auto;';
+        pre.style.cssText = 'white-space:pre-wrap;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px;margin-top:6px;max-height:200px;overflow:auto;';
         det.appendChild(pre);
       }
       row.querySelector('.bubble').appendChild(det);
@@ -1678,7 +1728,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'ligero-' + Date.now() + '.md';
+    a.download = 'convertidor-' + Date.now() + '.md';
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -1812,6 +1862,39 @@
       if(saved) messages = JSON.parse(saved);
     }catch(e){ messages = []; }
   }
+
+  // --- tema claro/oscuro ---
+  const themeBtn = document.getElementById('themeBtn');
+  const THEME_KEY = 'convertidor_theme';
+  function applyTheme(theme){
+    if(theme === 'dark'){
+      document.documentElement.setAttribute('data-theme','dark');
+      themeBtn.textContent = '☀️';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      themeBtn.textContent = '🌙';
+    }
+  }
+  function initTheme(){
+    let saved = null;
+    try{ saved = localStorage.getItem(THEME_KEY); }catch(e){}
+    if(!saved){
+      // respetar preferencia del sistema la primera vez
+      saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    applyTheme(saved);
+  }
+  themeBtn.addEventListener('click', ()=>{
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    applyTheme(next);
+    try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  });
+  initTheme();
+
+  // año del footer
+  const yearEl = document.getElementById('year');
+  if(yearEl) yearEl.textContent = new Date().getFullYear();
 
   restore();
   render();

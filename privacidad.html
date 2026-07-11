@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de Privacidad — Convertidor</title>
+<meta name="description" content="Política de privacidad del Convertidor a Markdown de KODAMA LaB.">
+<link rel="stylesheet" href="paginas.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="hash">#</span>
+    <a class="name" href="index.html">Convertidor</a>
+    <span class="tag">markdown para IA</span>
+  </div>
+  <div class="header-actions">
+    <nav class="topnav">
+      <a href="como-usar.html">Cómo usar</a>
+      <a href="beneficios.html">Beneficios</a>
+      <a href="privacidad.html" class="active">Privacidad</a>
+    </nav>
+    <button class="ghost icon-btn" id="themeBtn" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
+    <a class="cta" href="index.html">Abrir herramienta</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="filename"><span class="dot"></span>privacidad.md</div>
+  <h1><span class="hash">#</span>Política de Privacidad</h1>
+  <p class="lead">Última actualización: <span id="today"></span></p>
+</section>
+
+<main>
+  <p>Esta Política de Privacidad describe cómo <strong>Convertidor</strong>, operado por <strong>KODAMA LaB</strong> ("nosotros"), trata la información cuando usas nuestra herramienta y sitio web. Al usar el sitio, aceptas las prácticas aquí descritas.</p>
+
+  <h2><span class="mark">##</span> 1. Procesamiento local: tus archivos no se suben</h2>
+  <p>La función principal del Convertidor (convertir texto, documentos e imágenes a Markdown) se ejecuta <strong>enteramente dentro de tu navegador</strong>. Los documentos, imágenes y textos que conviertes <strong>no se transmiten ni se almacenan en ningún servidor nuestro</strong>. No tenemos acceso al contenido que procesas.</p>
+
+  <h2><span class="mark">##</span> 2. Almacenamiento en tu navegador</h2>
+  <p>Para mejorar tu experiencia, guardamos cierta información <strong>únicamente en tu dispositivo</strong>, mediante el almacenamiento local del navegador (<code>localStorage</code>):</p>
+  <ul>
+    <li>Tu historial de conversiones, para que no se pierda al recargar la página.</li>
+    <li>Tu preferencia de tema (claro u oscuro).</li>
+  </ul>
+  <p>Esta información no se envía a nosotros ni a terceros, y puedes eliminarla en cualquier momento usando el botón "vaciar chat" o borrando los datos de navegación de tu navegador.</p>
+
+  <h2><span class="mark">##</span> 3. Servicios de terceros</h2>
+  <p>Para funcionar, el sitio carga librerías de código (por ejemplo, para el reconocimiento de texto en imágenes) desde redes de distribución de contenido (CDN) de terceros. Al cargar estos recursos, tu navegador puede compartir con esos proveedores información técnica básica como tu dirección IP y el tipo de navegador. No controlamos las prácticas de datos de estos proveedores.</p>
+
+  <h2><span class="mark">##</span> 4. Publicidad</h2>
+  <p>Este sitio puede mostrar anuncios de terceros. Estos proveedores de publicidad pueden usar cookies o tecnologías similares para mostrar anuncios basados en tus visitas a este y otros sitios web. Puedes revisar y ajustar tus preferencias de publicidad en la configuración de tu navegador o en las páginas del proveedor de anuncios correspondiente.</p>
+
+  <h2><span class="mark">##</span> 5. Analítica</h2>
+  <p>Podemos usar herramientas de analítica para entender cuántas personas visitan el sitio y cómo lo usan, de forma agregada y anónima. Esta información nos ayuda a mejorar la herramienta y no se utiliza para identificarte personalmente.</p>
+
+  <h2><span class="mark">##</span> 6. Datos de menores</h2>
+  <p>El sitio no está dirigido a menores de edad y no recopilamos conscientemente información personal de ellos.</p>
+
+  <h2><span class="mark">##</span> 7. Cambios a esta política</h2>
+  <p>Podemos actualizar esta Política de Privacidad ocasionalmente. Publicaremos cualquier cambio en esta página con su fecha de actualización.</p>
+
+  <h2><span class="mark">##</span> 8. Contacto</h2>
+  <p>Si tienes preguntas sobre esta Política de Privacidad, puedes escribirnos a: <strong>[escribe aquí tu correo de contacto]</strong>.</p>
+
+  <div class="note">
+    Este documento es una plantilla general de buena fe y no constituye asesoría legal. Si tu proyecto crece o manejas obligaciones legales específicas, conviene revisarlo con un profesional.
+  </div>
+</main>
+
+<footer class="site-footer">
+  © <span id="year"></span> <strong>KODAMA LaB</strong><span class="sep">·</span>Todos los derechos reservados<span class="sep">·</span><a href="privacidad.html">Privacidad</a>
+</footer>
+
+<script>
+  (function(){
+    var btn = document.getElementById('themeBtn');
+    var KEY = 'convertidor_theme';
+    function apply(t){
+      if(t==='dark'){ document.documentElement.setAttribute('data-theme','dark'); btn.textContent='☀️'; }
+      else { document.documentElement.removeAttribute('data-theme'); btn.textContent='🌙'; }
+    }
+    var saved=null; try{ saved=localStorage.getItem(KEY); }catch(e){}
+    if(!saved){ saved=(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'; }
+    apply(saved);
+    btn.addEventListener('click', function(){
+      var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+      var next=isDark?'light':'dark'; apply(next);
+      try{ localStorage.setItem(KEY,next); }catch(e){}
+    });
+    var y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();
+    var td=document.getElementById('today');
+    if(td){ td.textContent = new Date().toLocaleDateString('es', {year:'numeric', month:'long', day:'numeric'}); }
+  })();
+</script>
+</body>
+</html>
